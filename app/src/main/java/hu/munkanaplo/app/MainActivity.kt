@@ -1,9 +1,16 @@
 package hu.munkanaplo.app
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -15,14 +22,25 @@ import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private val appUrl = "https://script.google.com/macros/s/AKfycbySsPaCt9iK76WRELplyrIUrgRUQN5fo6sXeKd_53c4lTNjsPWAHrTBj4y8iqv7iGB59g/exec"
+
+    private var speechRecognizer: SpeechRecognizer? = null
+    private var pendingFieldId: String? = null
+    private var isUserStopping = false
+
+    companion object {
+        private const val REQ_RECORD_AUDIO = 1001
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,7 +56,6 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = true
         }
 
-        // Külső keret, amely pontosan a státuszsáv ALATT tartja a WebView-t
         val rootLayout = FrameLayout(this).apply {
             setBackgroundColor(Color.parseColor("#f0f2f5"))
         }
@@ -54,7 +71,6 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(webView)
         setContentView(rootLayout)
 
-        // Rendszersávok (státuszsáv + billentyűzet) magasságának figyelembevétele
         ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
             val insets = windowInsets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
@@ -63,7 +79,6 @@ class MainActivity : AppCompatActivity() {
             WindowInsetsCompat.CONSUMED
         }
 
-        // Sütik engedélyezése (szükséges a Google Apps Script háttérhívásaihoz)
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
         cookieManager.setAcceptThirdPartyCookies(webView, true)
@@ -80,7 +95,9 @@ class MainActivity : AppCompatActivity() {
             cacheMode = WebSettings.LOAD_DEFAULT
         }
 
-        // Átirányítások tartása a WebView-n belül + Google sáv elrejtése + hálózati hiba kezelése
+        // Natív Android beszédfelismerő híd regisztrálása a WebView-ba
+        webView.addJavascriptInterface(AndroidSpeechBridge(), "AndroidSpeech")
+
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(
                 view: WebView?,
@@ -117,7 +134,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Natív felugró ablakok (alert és törlés megerősítés) + korai sáv-elrejtés
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 super.onProgressChanged(view, newProgress)
@@ -156,7 +172,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Vissza gomb kezelése
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (webView.canGoBack()) {
@@ -168,6 +183,176 @@ class MainActivity : AppCompatActivity() {
         })
 
         webView.loadUrl(appUrl)
+    }
+
+    inner class AndroidSpeechBridge {
+        @JavascriptInterface
+        fun startListening(fieldId: String) {
+            runOnUiThread {
+                if (ContextCompat.checkSelfPermission(
+                        this@MainActivity,
+                        Manifest.permission.RECORD_AUDIO
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    pendingFieldId = fieldId
+                    ActivityCompat.requestPermissions(
+                        this@MainActivity,
+                        arrayOf(Manifest.permission.RECORD_AUDIO),
+                        REQ_RECORD_AUDIO
+                    )
+                    return@runOnUiThread
+                }
+                beginNativeRecognition()
+            }
+        }
+
+        @JavascriptInterface
+        fun stopListening() {
+            runOnUiThread {
+                isUserStopping = true
+                try {
+                    speechRecognizer?.stopListening()
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_RECORD_AUDIO) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (pendingFieldId != null) {
+                    pendingFieldId = null
+                    beginNativeRecognition()
+                }
+            } else {
+                pendingFieldId = null
+                sendSpeechEvent(
+                    event = "error",
+                    message = "A mikrofon használata nincs engedélyezve az alkalmazásnak."
+                )
+            }
+        }
+    }
+
+    private fun beginNativeRecognition() {
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            sendSpeechEvent(
+                event = "error",
+                message = "A készüléken nem érhető el a Google beszédfelismerő szolgáltatás."
+            )
+            return
+        }
+
+        isUserStopping = false
+        try {
+            speechRecognizer?.destroy()
+        } catch (_: Exception) {
+        }
+
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
+            setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {
+                    sendSpeechEvent(event = "ready")
+                }
+
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() {}
+
+                override fun onPartialResults(partialResults: Bundle?) {
+                    val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    val text = matches?.firstOrNull().orEmpty()
+                    if (text.isNotEmpty()) {
+                        sendSpeechEvent(event = "result", text = text, isFinal = false)
+                    }
+                }
+
+                override fun onResults(results: Bundle?) {
+                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    val text = matches?.firstOrNull().orEmpty()
+                    if (text.isNotEmpty()) {
+                        sendSpeechEvent(event = "result", text = text, isFinal = true)
+                    } else {
+                        sendSpeechEvent(event = "end")
+                    }
+                }
+
+                override fun onError(error: Int) {
+                    if (isUserStopping && (error == SpeechRecognizer.ERROR_CLIENT || error == SpeechRecognizer.ERROR_NO_MATCH)) {
+                        sendSpeechEvent(event = "end")
+                        return
+                    }
+                    val msg = when (error) {
+                        SpeechRecognizer.ERROR_AUDIO -> "Hangrögzítési hiba történt."
+                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Nincs mikrofon engedély."
+                        SpeechRecognizer.ERROR_NETWORK,
+                        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Hálózati hiba a beszédfelismerés közben."
+                        SpeechRecognizer.ERROR_NO_MATCH,
+                        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Nem érzékeltem érthető beszédet. Próbáld újra!"
+                        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "A beszédfelismerő éppen foglalt, próbáld újra!"
+                        SpeechRecognizer.ERROR_SERVER -> "Szerverhiba a beszédfelismerésnél."
+                        else -> ""
+                    }
+                    sendSpeechEvent(event = "error", message = msg)
+                }
+
+                override fun onEvent(eventType: Int, params: Bundle?) {}
+            })
+        }
+
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hu-HU")
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        }
+
+        try {
+            speechRecognizer?.startListening(intent)
+        } catch (e: Exception) {
+            sendSpeechEvent(event = "error", message = "Nem sikerült elindítani a mikrofont: ${e.message}")
+        }
+    }
+
+    private fun sendSpeechEvent(
+        event: String,
+        text: String = "",
+        isFinal: Boolean = false,
+        message: String = ""
+    ) {
+        val json = JSONObject().apply {
+            put("type", "ANDROID_SPEECH")
+            put("event", event)
+            put("text", text)
+            put("isFinal", isFinal)
+            put("message", message)
+        }.toString()
+
+        val js = """
+            (function() {
+                var msg = $json;
+                function broadcast(win) {
+                    try { win.postMessage(msg, '*'); } catch (e) {}
+                    try {
+                        for (var i = 0; i < win.frames.length; i++) {
+                            broadcast(win.frames[i]);
+                        }
+                    } catch (e) {}
+                }
+                broadcast(window);
+            })();
+        """.trimIndent()
+
+        runOnUiThread {
+            webView.evaluateJavascript(js, null)
+        }
     }
 
     private fun dismissGoogleBanner(view: WebView?) {
@@ -220,5 +405,13 @@ class MainActivity : AppCompatActivity() {
             })();
         """.trimIndent()
         view?.evaluateJavascript(js, null)
+    }
+
+    override fun onDestroy() {
+        try {
+            speechRecognizer?.destroy()
+        } catch (_: Exception) {
+        }
+        super.onDestroy()
     }
 }
