@@ -93,6 +93,7 @@ class MainActivity : AppCompatActivity() {
             builtInZoomControls = false
             displayZoomControls = false
             cacheMode = WebSettings.LOAD_DEFAULT
+            userAgentString = "$userAgentString MunkanaploApp/1.0"
         }
 
         // Natív Android beszédfelismerő híd regisztrálása a WebView-ba
@@ -108,6 +109,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                injectTopLevelBridge(view)
                 dismissGoogleBanner(view)
             }
 
@@ -137,6 +139,9 @@ class MainActivity : AppCompatActivity() {
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 super.onProgressChanged(view, newProgress)
+                if (newProgress >= 30) {
+                    injectTopLevelBridge(view)
+                }
                 if (newProgress >= 75) {
                     dismissGoogleBanner(view)
                 }
@@ -183,6 +188,25 @@ class MainActivity : AppCompatActivity() {
         })
 
         webView.loadUrl(appUrl)
+    }
+
+    private fun injectTopLevelBridge(view: WebView?) {
+        val js = """
+            (function() {
+                if (window._munkanaploSpeechBridge) return;
+                window._munkanaploSpeechBridge = true;
+                window.addEventListener('message', function(event) {
+                    var d = event.data;
+                    if (!d || typeof d !== 'object') return;
+                    if (d.type === 'START_ANDROID_SPEECH' && window.AndroidSpeech) {
+                        window.AndroidSpeech.startListening(d.fieldId || '');
+                    } else if (d.type === 'STOP_ANDROID_SPEECH' && window.AndroidSpeech) {
+                        window.AndroidSpeech.stopListening();
+                    }
+                });
+            })();
+        """.trimIndent()
+        view?.evaluateJavascript(js, null)
     }
 
     inner class AndroidSpeechBridge {
