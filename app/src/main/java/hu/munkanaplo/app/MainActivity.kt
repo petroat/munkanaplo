@@ -11,10 +11,13 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,16 +28,40 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Állapotsor illesztése az alkalmazás háttérszínéhez
+        // Állapotsor és navigációs sáv színeinek beállítása
         @Suppress("DEPRECATION")
         window.statusBarColor = Color.parseColor("#f0f2f5")
-        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = Color.parseColor("#f0f2f5")
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
 
-        webView = WebView(this).apply {
-            fitsSystemWindows = true
+        // Külső keret, amely pontosan a státuszsáv ALATT tartja a WebView-t
+        val rootLayout = FrameLayout(this).apply {
             setBackgroundColor(Color.parseColor("#f0f2f5"))
         }
-        setContentView(webView)
+
+        webView = WebView(this).apply {
+            setBackgroundColor(Color.parseColor("#f0f2f5"))
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+
+        rootLayout.addView(webView)
+        setContentView(rootLayout)
+
+        // Rendszersávok (státuszsáv + billentyűzet) magasságának figyelembevétele
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { view, windowInsets ->
+            val insets = windowInsets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()
+            )
+            view.setPadding(insets.left, insets.top, insets.right, insets.bottom)
+            WindowInsetsCompat.CONSUMED
+        }
 
         // Sütik engedélyezése (szükséges a Google Apps Script háttérhívásaihoz)
         val cookieManager = CookieManager.getInstance()
@@ -53,13 +80,18 @@ class MainActivity : AppCompatActivity() {
             cacheMode = WebSettings.LOAD_DEFAULT
         }
 
-        // Átirányítások tartása a WebView-n belül + hálózati hiba kezelése
+        // Átirányítások tartása a WebView-n belül + Google sáv elrejtése + hálózati hiba kezelése
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(
                 view: WebView?,
                 request: WebResourceRequest?
             ): Boolean {
                 return false
+            }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                dismissGoogleBanner(view)
             }
 
             override fun onReceivedError(
@@ -85,8 +117,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Natív felugró ablakok (alert és törlés megerősítés) támogatása
+        // Natív felugró ablakok (alert és törlés megerősítés) + korai sáv-elrejtés
         webView.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                super.onProgressChanged(view, newProgress)
+                if (newProgress >= 75) {
+                    dismissGoogleBanner(view)
+                }
+            }
+
             override fun onJsAlert(
                 view: WebView?,
                 url: String?,
@@ -129,5 +168,57 @@ class MainActivity : AppCompatActivity() {
         })
 
         webView.loadUrl(appUrl)
+    }
+
+    private fun dismissGoogleBanner(view: WebView?) {
+        val js = """
+            (function() {
+                function hideBanner() {
+                    var known = document.getElementById('warning-bar') || document.querySelector('.warning-bar');
+                    if (known) {
+                        var closeBtn = known.querySelector('[role="button"], button, a[href="#"], .warning-bar-close, #warning-bar-close');
+                        if (closeBtn) { try { closeBtn.click(); } catch (e) {} }
+                        known.style.display = 'none';
+                    }
+
+                    var divs = document.querySelectorAll('div');
+                    for (var i = 0; i < divs.length; i++) {
+                        var d = divs[i];
+                        if (d.querySelector('iframe')) continue;
+                        var txt = (d.innerText || '').trim();
+                        if (txt.indexOf('Apps Script') !== -1 && d.offsetHeight > 0 && d.offsetHeight < 140) {
+                            var buttons = d.querySelectorAll('[role="button"], button, span, div, svg');
+                            for (var j = buttons.length - 1; j >= 0; j--) {
+                                var b = buttons[j];
+                                var rect = b.getBoundingClientRect();
+                                if (rect.width > 10 && rect.width < 60 && rect.right > window.innerWidth - 70) {
+                                    try { b.click(); } catch (e) {}
+                                    break;
+                                }
+                            }
+                            d.style.display = 'none';
+                        }
+                    }
+
+                    var frame = document.getElementById('sandboxFrame') || document.querySelector('iframe');
+                    if (frame) {
+                        frame.style.height = '100vh';
+                        frame.style.top = '0px';
+                    }
+                }
+
+                hideBanner();
+                setTimeout(hideBanner, 150);
+                setTimeout(hideBanner, 500);
+
+                if (!window._bannerObserver && document.body) {
+                    window._bannerObserver = new MutationObserver(function() {
+                        hideBanner();
+                    });
+                    window._bannerObserver.observe(document.body, { childList: true, subtree: true });
+                }
+            })();
+        """.trimIndent()
+        view?.evaluateJavascript(js, null)
     }
 }
