@@ -27,6 +27,13 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
+      - name: Bundle Logo Asset (Offline)
+        run: |
+          mkdir -p app/src/main/assets
+          if [ ! -f "app/src/main/assets/logo.png" ]; then
+            curl -fsSL "https://cms.budapesti.gep.szc.edir.hu/uploads/bgeszc_logok_m2_01_4e0cffaf86.png" -o app/src/main/assets/logo.png || rm -f app/src/main/assets/logo.png
+          fi
+
       - name: Prepare Release Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
