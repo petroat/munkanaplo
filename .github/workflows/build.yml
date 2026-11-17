@@ -1,9 +1,12 @@
-name: Build Android APK
+name: Build and Release Android APK
 
 on:
-  workflow_dispatch:
   push:
     branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -21,14 +24,59 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.10.2'
 
-      - name: Build Debug APK
-        run: gradle assembleDebug
+      - name: Prepare Release Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Using permanent keystore from GitHub Secrets..."
+            echo "$KEYSTORE_BASE64" | base64 -d > app/release.jks
+            echo "HAS_SECRET=true" >> $GITHUB_ENV
+          else
+            echo "Generating new release keystore..."
+            keytool -genkeypair -v \
+              -keystore app/release.jks \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -alias munkanaplo \
+              -storepass Munkanaplo2026! \
+              -keypass Munkanaplo2026! \
+              -dname "CN=Munkanaplo, OU=App, O=Munkanaplo, L=Budapest, C=HU"
+            mkdir -p keystore-backup
+            cp app/release.jks keystore-backup/munkanaplo-release.jks
+            base64 -w 0 app/release.jks > keystore-backup/keystore_base64.txt
+            echo "HAS_SECRET=false" >> $GITHUB_ENV
+          fi
 
-      - name: Upload APK artifact
+      - name: Upload One-Time Keystore Backup (until secret is saved)
+        if: env.HAS_SECRET == 'false'
         uses: actions/upload-artifact@v4
         with:
-          name: Munkanaplo-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: KEYSTORE-EGYSZERI-MENTES
+          path: keystore-backup/
+          retention-days: 3
+
+      - name: Build Signed Release APK
+        env:
+          KEYSTORE_FILE: release.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'Munkanaplo2026!' }}
+          KEY_ALIAS: munkanaplo
+          KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD || 'Munkanaplo2026!' }}
+        run: ./gradlew assembleRelease
+
+      - name: Rename APK for Release
+        run: cp app/build/outputs/apk/release/app-release.apk Munkanaplo.apk
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Munkanapló (Legfrissebb verzió)
+          body: |
+            Közvetlen Android telepítőcsomag (`Munkanaplo.apk`).
+            Telepítéshez koppints alul az **Assets** részben a **`Munkanaplo.apk`** fájlra.
+          files: Munkanaplo.apk
+          prerelease: false
+          make_latest: true
