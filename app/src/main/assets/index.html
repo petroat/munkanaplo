@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Munkanapló</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 14px;
+      color: #333;
+    }
+
+    /* Kezdőlap fejléc */
+    .app-header {
+      text-align: center;
+      padding: 8px 0 16px 0;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .app-header h1 {
+      margin: 0;
+      font-size: 20px;
+      color: #5f6368;
+      font-weight: 700;
+    }
+    .app-user-badge {
+      display: inline-block;
+      margin-top: 5px;
+      padding: 3px 10px;
+      background: #e8f0fe;
+      color: #1a73e8;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Onboarding (Első indítás) kártya */
+    .onboarding-card {
+      background: #ffffff;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: 22px 18px;
+      margin-top: 8px;
+    }
+    .onboarding-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a73e8;
+      margin: 0 0 6px 0;
+      text-align: center;
+    }
+    .onboarding-sub {
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+      margin: 0 0 18px 0;
+      line-height: 1.4;
+    }
+    .inline-add-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .inline-add-row input {
+      margin-top: 0;
+      flex: 1;
+    }
+    .small-add-btn {
+      padding: 0 14px;
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+      min-height: 28px;
+    }
+    .wp-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #e8f0fe;
+      color: #174ea6;
+      border: 1px solid #aecbfa;
+      padding: 6px 10px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .wp-chip button {
+      background: none;
+      border: none;
+      color: #c5221f;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+    }
+    .divider-or {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      color: #888;
+      font-size: 12px;
+      margin: 18px 0 12px 0;
+    }
+    .divider-or::before, .divider-or::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .divider-or:not(:empty)::before { margin-right: 10px; }
+    .divider-or:not(:empty)::after { margin-left: 10px; }
+
+    /* Accordion kártyák */
+    .accordion-card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .accordion-header {
+      width: 100%;
+      background: #ffffff;
+      border: none;
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      text-align: left;
+      transition: background-color 0.2s ease;
+    }
+    .accordion-header:active {
+      background-color: #f8f9fa;
+    }
+    .accordion-card.open .accordion-header {
+      border-bottom: 1px solid #e8eaed;
+      background-color: #f8fbff;
+    }
+    .accordion-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #888888;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .accordion-card.open .accordion-title,
+    .accordion-header:active .accordion-title {
+      color: #1a73e8 !important;
+    }
+    .accordion-icon {
+      font-size: 14px;
+      color: #888888;
+      transition: transform 0.25s ease;
+    }
+    .accordion-card.open .accordion-icon {
+      transform: rotate(180deg);
+    }
+    .accordion-content {
+      display: none;
+      padding: 18px;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .accordion-card.open .accordion-content {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h3 { margin-top: 0; color: #1a73e8; font-size: 18px; }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      color: #555;
+    }
+    label:first-child {
+      margin-top: 0;
+    }
+    .filter-grid label {
+      margin-top: 10px;
+      font-size: 15px;
+    }
+
+    /* Címke + Diktálás gomb sor */
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+    }
+    .label-row label {
+      margin-top: 0;
+    }
+    .mic-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      background-color: #e4e6eb;
+      color: #1a73e8;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .mic-btn:active {
+      background-color: #d8dadf;
+    }
+    .mic-btn.recording {
+      background-color: #dc3545;
+      color: #ffffff;
+      border-color: #b02a37;
+      animation: pulseMic 1.2s infinite;
+    }
+    @keyframes pulseMic {
+      0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.5); }
+      70% { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+      background: #fafafa;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: #1a73e8;
+      outline: none;
+      background: #fff;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .option-btn {
+      flex: 1 1 calc(50% - 8px);
+      min-width: 120px;
+      padding: 10px 8px;
+      background-color: #e4e6eb;
+      color: #444;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .option-btn.selected {
+      background-color: #1a73e8;
+      color: #ffffff;
+      border-color: #1557b0;
+      box-shadow: 0 2px 5px rgba(26,115,232,0.3);
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 13px;
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 16px;
+      cursor: pointer;
+    }
+    .submit-btn:disabled { background-color: #a0c3ff; }
+    .secondary-btn {
+      width: 100%;
+      padding: 11px;
+      background-color: #f1f3f4;
+      color: #1a73e8;
+      border: 1px solid #d2e3fc;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .export-btn {
+      width: 100%;
+      padding: 12px;
+      background-color: #137333;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .export-btn:active { background-color: #0d5626; }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .quick-filters {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .quick-btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 12px;
+      background: #e4e6eb;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .quick-btn.active {
+      background: #1a73e8;
+      color: white;
+    }
+    .toggle-material-btn {
+      width: 100%;
+      padding: 11px;
+      font-size: 13px;
+      margin-top: 12px;
+      background: #e4e6eb;
+      color: #444;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .toggle-material-btn.active {
+      background: #1a73e8;
+      color: white;
+      border-color: #1557b0;
+      box-shadow: 0 2px 5px rgba(26,115,232,0.3);
+    }
+    .summary-box {
+      background: #e8f0fe;
+      border: 1px solid #aecbfa;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    .summary-title { font-size: 12px; text-transform: uppercase; color: #174ea6; font-weight: bold; }
+    .summary-value { font-size: 20px; font-weight: bold; color: #1a73e8; margin-top: 2px; }
+    .summary-sub { font-size: 13px; color: #5f6368; margin-top: 2px; }
+    .entry-card {
+      background: #fff;
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-top: 10px;
+      border-left: 5px solid #1a73e8;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border-top: 1px solid #f1f3f4;
+      border-right: 1px solid #f1f3f4;
+      border-bottom: 1px solid #f1f3f4;
+    }
+    .entry-badge {
+      display: inline-block;
+      background: #e8f0fe;
+      color: #1a73e8;
+      font-weight: bold;
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+    .entry-header { font-weight: bold; font-size: 14px; color: #202124; }
+    .entry-time { font-size: 13px; color: #5f6368; margin: 4px 0; }
+    .entry-task { font-size: 14px; white-space: pre-wrap; margin-top: 6px; }
+    .entry-material {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #c5221f;
+      background: #fce8e6;
+      padding: 6px;
+      border-radius: 4px;
+    }
+    .delete-btn {
+      padding: 5px 10px;
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .status-msg {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      display: none;
+      font-weight: bold;
+      text-align: center;
+      font-size: 13px;
+    }
+    .success { background: #e6f4ea; color: #137333; }
+    .error { background: #fce8e6; color: #c5221f; }
+    .settings-section {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+    }
+    .settings-section:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+      margin-bottom: 0;
+    }
+    .helper-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- KEZDŐLAP FEJLÉC -->
+  <div class="app-header">
+    <h1>⏳ Munkanapló</h1>
+    <div id="headerUserBadge" class="app-user-badge" style="display:none;"></div>
+  </div>
+
+  <!-- ELSŐ INDÍTÁS (ONBOARDING) KÉPERNYŐ -->
+  <div id="onboardingScreen" class="onboarding-card" style="display:none;">
+    <h2 class="onboarding-title">👋 Üdvözöl a Munkanapló!</h2>
+    <p class="onboarding-sub">Állítsd be a nevedet és a munkahelyeidet. Minden adatod biztonságosan, helyben a telefonodon tárolódik.</p>
+
+    <label for="onboardName">Neved (exportált táblázatokhoz):</label>
+    <input type="text" id="onboardName" placeholder="Pl. Kiss János">
+
+    <label for="onboardWpInput" style="margin-top:14px;">Munkahelyek hozzáadása:</label>
+    <div class="inline-add-row">
+      <input type="text" id="onboardWpInput" placeholder="Pl. Iroda, Telephely...">
+      <button type="button" class="small-add-btn" onclick="addOnboardingWorkplace()">➕ Hozzáad</button>
+    </div>
+    <div id="onboardWpList" class="chip-list"></div>
+
+    <button type="button" class="submit-btn" onclick="completeOnboarding()">🚀 Munkanapló indítása</button>
+
+    <div class="divider-or">VAGY</div>
+
+    <button type="button" class="secondary-btn" onclick="triggerImportFromOnboarding()">
+      📥 Meglévő Google Táblázat (.xlsx / .csv) vagy mentés betöltése
+    </button>
+    <p class="helper-text" style="text-align:center;">
+      Ha már használtad a Google Táblázatos verziót, töltsd le onnan <b>.xlsx</b> formátumban, és egyetlen lépésben áthozhatod az összes munkahelyedet és korábbi bejegyzésedet!
+    </p>
+    <div id="onboardStatus" class="status-msg"></div>
+  </div>
+
+  <!-- FŐ ALKALMAZÁS FELÜLET -->
+  <div id="mainAppContainer" style="display:none;">
+
+    <!-- 1. ACCORDION: ÚJ TEVÉKENYSÉG -->
+    <div class="accordion-card" id="accNew">
+      <button type="button" class="accordion-header" onclick="toggleAccordion('accNew')" aria-expanded="false">
+        <span class="accordion-title">➕ Új tevékenység</span>
+        <span class="accordion-icon">▼</span>
+      </button>
+      <div class="accordion-content">
+        <form id="workForm">
+          <label>Munkahely:</label>
+          <div id="workplaceGroup" class="btn-group"></div>
+
+          <label for="datum">Dátum:</label>
+          <input type="date" id="datum" required>
+
+          <div class="filter-grid">
+            <div>
+              <label for="idoKezdete">Kezdés:</label>
+              <input type="time" id="idoKezdete" required>
+            </div>
+            <div>
+              <label for="idoVege">Befejezés:</label>
+              <input type="time" id="idoVege" required>
+            </div>
+          </div>
+
+          <div class="label-row">
+            <label for="feladat">Feladat leírása:</label>
+            <button type="button" class="mic-btn" id="mic-feladat" onclick="toggleDictation('feladat')">🎙️ Diktálás</button>
+          </div>
+          <textarea id="feladat" rows="3" placeholder="Mi volt a feladat?" required></textarea>
+
+          <div class="label-row">
+            <label for="anyag">Anyagszükséglet:</label>
+            <button type="button" class="mic-btn" id="mic-anyag" onclick="toggleDictation('anyag')">🎙️ Diktálás</button>
+          </div>
+          <textarea id="anyag" rows="2" placeholder="Pl. 2db átalakító, kábelek... (opcionális)"></textarea>
+
+          <button type="submit" id="saveBtn" class="submit-btn">Mentés</button>
+        </form>
+        <div id="statusMsg" class="status-msg"></div>
+      </div>
+    </div>
+
+    <!-- 2. ACCORDION: SZŰRŐK ÉS BEJEGYZÉSEK -->
+    <div class="accordion-card" id="accFilter">
+      <button type="button" class="accordion-header" onclick="toggleAccordion('accFilter')" aria-expanded="false">
+        <span class="accordion-title">🔍 Keresés</span>
+        <span class="accordion-icon">▼</span>
+      </button>
+      <div class="accordion-content">
+        <!-- Gyors Dátumszűrők -->
+        <div class="quick-filters">
+          <button type="button" class="quick-btn active" id="qCurrentMonth" onclick="setQuickFilter('currentMonth')">ez a hónap</button>
+          <button type="button" class="quick-btn" id="qAll" onclick="setQuickFilter('all')">összes</button>
+          <button type="button" class="quick-btn" id="qCustom" onclick="setQuickFilter('custom')">egyéni időszak</button>
+        </div>
+
+        <!-- Szűrő Mezők -->
+        <label for="filterWorkplace">Munkahelyek:</label>
+        <select id="filterWorkplace" onchange="applyFilters()">
+          <option value="">-- összes munkahely --</option>
+        </select>
+
+        <!-- Dátumválasztó mezők EGYMÁS ALATT -->
+        <label for="filterDateFrom">-tól:</label>
+        <input type="date" id="filterDateFrom" onchange="onCustomDateChange()">
+
+        <label for="filterDateTo">-ig:</label>
+        <input type="date" id="filterDateTo" onchange="onCustomDateChange()">
+
+        <label for="filterSearch">Keresés szövegben:</label>
+        <input type="text" id="filterSearch" placeholder="keresés feladatban vagy anyagban..." oninput="applyFilters()">
+
+        <!-- Anyagigény szűrő gomb -->
+        <button type="button" id="btnMaterialOnly" class="toggle-material-btn" onclick="toggleMaterialFilter()">
+          📦 Csak anyagigénnyel
+        </button>
+
+        <br><br>
+
+        <h3>Bejegyzések</h3>
+
+        <!-- ÖSSZEGZŐ PANEL -->
+        <div class="summary-box">
+          <div class="summary-title">Szűrt időtartam összesen:</div>
+          <div class="summary-value" id="summaryTotalTime">0 óra 0 perc</div>
+          <div class="summary-sub" id="summaryCount">0 bejegyzés alapján.</div>
+        </div>
+
+        <!-- EXPORT GOMB -->
+        <button type="button" class="export-btn" onclick="exportFilteredToExcel()">
+          📊 Szűrt lista exportálása táblázatba (.xlsx)
+        </button>
+
+        <!-- LISTA -->
+        <div id="logList">
+          <p style="color: #888; text-align: center;">betöltés...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. ACCORDION: BEÁLLÍTÁSOK ÉS ADATKEZELÉS -->
+    <div class="accordion-card" id="accSettings">
+      <button type="button" class="accordion-header" onclick="toggleAccordion('accSettings')" aria-expanded="false">
+        <span class="accordion-title">⚙️ Beállítások</span>
+        <span class="accordion-icon">▼</span>
+      </button>
+      <div class="accordion-content">
+        <div class="settings-section">
+          <label for="settingsUserName">Felhasználó neve:</label>
+          <div class="inline-add-row">
+            <input type="text" id="settingsUserName" placeholder="Neved...">
+            <button type="button" class="small-add-btn" onclick="saveUserNameSetting()">Mentés</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <label for="settingsNewWp">Munkahelyek kezelése:</label>
+          <div class="inline-add-row">
+            <input type="text" id="settingsNewWp" placeholder="Új munkahely neve...">
+            <button type="button" class="small-add-btn" onclick="addWorkplaceSetting()">➕ Hozzáad</button>
+          </div>
+          <div id="settingsWpList" class="chip-list"></div>
+        </div>
+
+        <div class="settings-section">
+          <label>Adatbázis importálás és biztonsági mentés:</label>
+          <button type="button" class="secondary-btn" onclick="triggerImportFromSettings()">
+            📥 Google Táblázat importálása (.xlsx / .csv)
+          </button>
+          <button type="button" class="secondary-btn" onclick="exportFullJsonBackup()">
+            💾 Teljes biztonsági mentés készítése (.json)
+          </button>
+          <p class="helper-text">
+            A <b>Google Táblázat importálása</b> beolvassa a letöltött <b>.xlsx</b> vagy <b>.csv</b> fájlod sorait (és a <i>Munkahelyek</i> fület is), duplikációk nélkül. A <b>.json</b> mentéssel telefoncsere esetén is teljes egészében visszaállíthatod az adatbázist.
+          </p>
+        </div>
+
+        <div id="settingsStatus" class="status-msg"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Rejtett fájlválasztó böngészős teszteléshez -->
+  <input type="file" id="fallbackFileInput" accept=".xlsx,.csv,.json" style="display:none" onchange="handleFallbackFileSelect(event)">
+
+  <script>
+    // ==========================================
+    // 1. HELYI ADATBÁZIS (IndexedDB)
+    // ==========================================
+    const DB_NAME = 'MunkanaploLocalDB';
+    const DB_VERSION = 1;
+    let db = null;
+
+    let userProfile = {
+      id: 'main',
+      name: '',
+      workplaces: []
+    };
+    let onboardingWorkplaces = [];
+    let allRecords = [];
+    let currentFilteredRecords = [];
+    let selectedWorkplace = "";
+    let onlyMaterialFilter = false;
+    let importTargetContext = 'settings';
+
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = function(e) {
+          const database = e.target.result;
+          if (!database.objectStoreNames.contains('profile')) {
+            database.createObjectStore('profile', { keyPath: 'id' });
+          }
+          if (!database.objectStoreNames.contains('entries')) {
+            database.createObjectStore('entries', { keyPath: 'id', autoIncrement: true });
+          }
+        };
+        request.onsuccess = function(e) {
+          db = e.target.result;
+          resolve(db);
+        };
+        request.onerror = function(e) {
+          reject(e.target.error);
+        };
+      });
+    }
+
+    function dbGetProfile() {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('profile', 'readonly');
+        const store = tx.objectStore('profile');
+        const req = store.get('main');
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbSaveProfile(profileObj) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('profile', 'readwrite');
+        const store = tx.objectStore('profile');
+        const req = store.put(profileObj);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbGetAllEntries() {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('entries', 'readonly');
+        const store = tx.objectStore('entries');
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbAddEntry(entryObj) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('entries', 'readwrite');
+        const store = tx.objectStore('entries');
+        const req = store.add(entryObj);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbDeleteEntry(id) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('entries', 'readwrite');
+        const store = tx.objectStore('entries');
+        const req = store.delete(id);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function dbBulkAddEntries(entriesArray) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('entries', 'readwrite');
+        const store = tx.objectStore('entries');
+        entriesArray.forEach(item => {
+          const cleanItem = {
+            munkahely: item.munkahely || '',
+            datum: item.datum || '',
+            idoKezdete: item.idoKezdete || '',
+            idoVege: item.idoVege || '',
+            intervallum: item.intervallum || calcDurationStr(item.idoKezdete, item.idoVege),
+            feladat: item.feladat || '',
+            anyag: item.anyag || ''
+          };
+          store.add(cleanItem);
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    // ==========================================
+    // 2. INDÍTÁS ÉS ONBOARDING
+    // ==========================================
+    document.getElementById('datum').valueAsDate = new Date();
+
+    window.addEventListener('load', async function() {
+      initSpeechRecognition();
+      try {
+        await openDatabase();
+        const savedProfile = await dbGetProfile();
+        allRecords = await dbGetAllEntries();
+
+        if (!savedProfile || !savedProfile.name || !savedProfile.workplaces || savedProfile.workplaces.length === 0) {
+          showOnboarding();
+        } else {
+          userProfile = savedProfile;
+          showMainApp();
+        }
+      } catch (err) {
+        alert("Hiba a helyi adatbázis megnyitásakor: " + err);
+      }
+    });
+
+    function showOnboarding() {
+      document.getElementById('onboardingScreen').style.display = 'block';
+      document.getElementById('mainAppContainer').style.display = 'none';
+      document.getElementById('headerUserBadge').style.display = 'none';
+      renderOnboardingWorkplaces();
+    }
+
+    function addOnboardingWorkplace() {
+      const inp = document.getElementById('onboardWpInput');
+      const val = inp.value.trim();
+      if (!val) return;
+      if (!onboardingWorkplaces.some(w => w.toLowerCase() === val.toLowerCase())) {
+        onboardingWorkplaces.push(val);
+      }
+      inp.value = '';
+      renderOnboardingWorkplaces();
+    }
+
+    function removeOnboardingWorkplace(idx) {
+      onboardingWorkplaces.splice(idx, 1);
+      renderOnboardingWorkplaces();
+    }
+
+    function renderOnboardingWorkplaces() {
+      const box = document.getElementById('onboardWpList');
+      if (onboardingWorkplaces.length === 0) {
+        box.innerHTML = '<span style="font-size:12px; color:#888;">Még nincs hozzáadva munkahely.</span>';
+        return;
+      }
+      box.innerHTML = onboardingWorkplaces.map((wp, idx) => `
+        <span class="wp-chip">
+          ${escapeHtml(wp)}
+          <button type="button" onclick="removeOnboardingWorkplace(${idx})">✕</button>
+        </span>
+      `).join('');
+    }
+
+    async function completeOnboarding() {
+      const nameVal = document.getElementById('onboardName').value.trim();
+      const pendingWp = document.getElementById('onboardWpInput').value.trim();
+      if (pendingWp && !onboardingWorkplaces.some(w => w.toLowerCase() === pendingWp.toLowerCase())) {
+        onboardingWorkplaces.push(pendingWp);
+        document.getElementById('onboardWpInput').value = '';
+      }
+
+      if (!nameVal) {
+        showBoxStatus('onboardStatus', 'Kérlek add meg a nevedet!', false);
+        return;
+      }
+      if (onboardingWorkplaces.length === 0) {
+        showBoxStatus('onboardStatus', 'Kérlek adj hozzá legalább egy munkahelyet!', false);
+        return;
+      }
+
+      userProfile = {
+        id: 'main',
+        name: nameVal,
+        workplaces: onboardingWorkplaces
+      };
+      await dbSaveProfile(userProfile);
+      showMainApp();
+    }
+
+    function showMainApp() {
+      document.getElementById('onboardingScreen').style.display = 'none';
+      document.getElementById('mainAppContainer').style.display = 'block';
+
+      const badge = document.getElementById('headerUserBadge');
+      badge.innerText = '👤 ' + userProfile.name;
+      badge.style.display = 'inline-block';
+
+      document.getElementById('settingsUserName').value = userProfile.name;
+      refreshWorkplaceUI();
+      setQuickFilter('currentMonth');
+    }
+
+    function refreshWorkplaceUI() {
+      renderWorkplaceButtons(userProfile.workplaces);
+      populateWorkplaceFilter(userProfile.workplaces);
+      renderSettingsWorkplaces();
+    }
+
+    // ==========================================
+    // 3. BEÁLLÍTÁSOK KEZELÉSE
+    // ==========================================
+    async function saveUserNameSetting() {
+      const newName = document.getElementById('settingsUserName').value.trim();
+      if (!newName) {
+        showBoxStatus('settingsStatus', 'A név nem lehet üres!', false);
+        return;
+      }
+      userProfile.name = newName;
+      await dbSaveProfile(userProfile);
+      document.getElementById('headerUserBadge').innerText = '👤 ' + userProfile.name;
+      showBoxStatus('settingsStatus', 'Név sikeresen frissítve!', true);
+    }
+
+    async function addWorkplaceSetting() {
+      const inp = document.getElementById('settingsNewWp');
+      const val = inp.value.trim();
+      if (!val) return;
+      if (userProfile.workplaces.some(w => w.toLowerCase() === val.toLowerCase())) {
+        showBoxStatus('settingsStatus', 'Ez a munkahely már szerepel a listában.', false);
+        return;
+      }
+      userProfile.workplaces.push(val);
+      await dbSaveProfile(userProfile);
+      inp.value = '';
+      refreshWorkplaceUI();
+      showBoxStatus('settingsStatus', 'Munkahely hozzáadva!', true);
+    }
+
+    async function removeWorkplaceSetting(idx) {
+      if (userProfile.workplaces.length <= 1) {
+        showBoxStatus('settingsStatus', 'Legalább egy munkahelynek maradnia kell!', false);
+        return;
+      }
+      const wpName = userProfile.workplaces[idx];
+      if (!confirm(`Törlöd a "${wpName}" munkahelyet a választható gombok közül? (A korábbi bejegyzéseid megmaradnak.)`)) return;
+      userProfile.workplaces.splice(idx, 1);
+      await dbSaveProfile(userProfile);
+      refreshWorkplaceUI();
+      showBoxStatus('settingsStatus', 'Munkahely eltávolítva.', true);
+    }
+
+    function renderSettingsWorkplaces() {
+      const box = document.getElementById('settingsWpList');
+      box.innerHTML = userProfile.workplaces.map((wp, idx) => `
+        <span class="wp-chip">
+          ${escapeHtml(wp)}
+          <button type="button" onclick="removeWorkplaceSetting(${idx})">✕</button>
+        </span>
+      `).join('');
+    }
+
+    // ==========================================
+    // 4. TEVÉKENYSÉG MENTÉSE ÉS TÖRLÉSE
+    // ==========================================
+    function renderWorkplaceButtons(workplaces) {
+      const container = document.getElementById('workplaceGroup');
+      if (!workplaces || workplaces.length === 0) {
+        container.innerHTML = '<p style="color: #c5221f; font-size: 13px;">Adj hozzá munkahelyet a Beállítások menüben!</p>';
+        selectedWorkplace = "";
+        return;
+      }
+
+      if (!workplaces.includes(selectedWorkplace)) {
+        selectedWorkplace = workplaces[0];
+      }
+
+      container.innerHTML = workplaces.map(wp => `
+        <div class="option-btn ${wp === selectedWorkplace ? 'selected' : ''}" onclick="selectWorkplace('${escapeJs(wp)}', this)">
+          ${escapeHtml(wp)}
+        </div>
+      `).join('');
+    }
+
+    function selectWorkplace(wpName, btnEl) {
+      selectedWorkplace = wpName;
+      document.querySelectorAll('#workplaceGroup .option-btn').forEach(btn => btn.classList.remove('selected'));
+      btnEl.classList.add('selected');
+    }
+
+    function populateWorkplaceFilter(workplaces) {
+      const select = document.getElementById('filterWorkplace');
+      const prevVal = select.value;
+      select.innerHTML = '<option value="">-- összes munkahely --</option>' +
+        (workplaces || []).map(wp => `<option value="${escapeHtml(wp)}">${escapeHtml(wp)}</option>`).join('');
+      select.value = prevVal;
+    }
+
+    document.getElementById('workForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      stopDictation();
+
+      if (!selectedWorkplace) {
+        alert("Kérlek válassz munkahelyet!");
+        return;
+      }
+
+      const datum = document.getElementById('datum').value;
+      const idoKezdete = document.getElementById('idoKezdete').value;
+      const idoVege = document.getElementById('idoVege').value;
+      const feladat = document.getElementById('feladat').value.trim();
+      const anyag = document.getElementById('anyag').value.trim();
+      const intervallum = calcDurationStr(idoKezdete, idoVege);
+
+      const newEntry = {
+        munkahely: selectedWorkplace,
+        datum: datum,
+        idoKezdete: idoKezdete,
+        idoVege: idoVege,
+        intervallum: intervallum,
+        feladat: feladat,
+        anyag: anyag
+      };
+
+      try {
+        const insertedId = await dbAddEntry(newEntry);
+        newEntry.id = insertedId;
+        allRecords.push(newEntry);
+        applyFilters();
+
+        document.getElementById('feladat').value = '';
+        document.getElementById('anyag').value = '';
+        showStatus("Sikeresen rögzítve a helyi adatbázisba!", true);
+      } catch (err) {
+        showStatus("Hiba a mentéskor: " + err, false);
+      }
+    });
+
+    async function deleteEntry(id) {
+      if (!confirm("Biztosan törölni szeretnéd ezt a bejegyzést?")) return;
+      try {
+        await dbDeleteEntry(id);
+        allRecords = allRecords.filter(r => r.id !== id);
+        applyFilters();
+      } catch (err) {
+        alert("Hiba a törlésnél: " + err);
+      }
+    }
+
+    // ==========================================
+    // 5. SZŰRÉS ÉS LISTÁZÁS
+    // ==========================================
+    function setQuickFilter(type) {
+      document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+
+      const now = new Date();
+      const fromInput = document.getElementById('filterDateFrom');
+      const toInput = document.getElementById('filterDateTo');
+
+      if (type === 'currentMonth') {
+        document.getElementById('qCurrentMonth').classList.add('active');
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        fromInput.value = formatDateStr(firstDay);
+        toInput.value = formatDateStr(lastDay);
+      } else if (type === 'all') {
+        document.getElementById('qAll').classList.add('active');
+        fromInput.value = "";
+        toInput.value = "";
+      } else if (type === 'custom') {
+        document.getElementById('qCustom').classList.add('active');
+      }
+
+      applyFilters();
+    }
+
+    function onCustomDateChange() {
+      document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('qCustom').classList.add('active');
+      applyFilters();
+    }
+
+    function toggleMaterialFilter() {
+      onlyMaterialFilter = !onlyMaterialFilter;
+      const btn = document.getElementById('btnMaterialOnly');
+      if (onlyMaterialFilter) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const wpFilter = document.getElementById('filterWorkplace').value.toLowerCase();
+      const dateFrom = document.getElementById('filterDateFrom').value;
+      const dateTo = document.getElementById('filterDateTo').value;
+      const searchText = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+      let filtered = allRecords.filter(item => {
+        if (wpFilter && item.munkahely.toLowerCase() !== wpFilter) return false;
+
+        const itemDate = normDate(item.datum);
+        if (dateFrom && dateFrom > itemDate) return false;
+        if (dateTo && itemDate > dateTo) return false;
+
+        if (searchText) {
+          const inTask = (item.feladat || '').toLowerCase().includes(searchText);
+          const inMaterial = (item.anyag || '').toLowerCase().includes(searchText);
+          if (!inTask && !inMaterial) return false;
+        }
+
+        if (onlyMaterialFilter && (!item.anyag || item.anyag.trim() === "")) {
+          return false;
+        }
+
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        const dateA = normDate(a.datum) + " " + (a.idoKezdete || '');
+        const dateB = normDate(b.datum) + " " + (b.idoKezdete || '');
+        return dateB.localeCompare(dateA);
+      });
+
+      currentFilteredRecords = filtered;
+
+      let totalMinutes = 0;
+      filtered.forEach(item => {
+        totalMinutes += intervalToMinutes(item.intervallum, item.idoKezdete, item.idoVege);
+      });
+
+      const totalHours = Math.floor(totalMinutes / 60);
+      const remMinutes = totalMinutes % 60;
+
+      document.getElementById('summaryTotalTime').innerText = `${totalHours} óra ${remMinutes} perc`;
+      document.getElementById('summaryCount').innerText = `${filtered.length} bejegyzés alapján.`;
+
+      renderLogList(filtered);
+    }
+
+    function renderLogList(records) {
+      const container = document.getElementById('logList');
+
+      if (records.length === 0) {
+        container.innerHTML = '<p style="color: #888; text-align: center; margin-top: 15px;">Nincs a szűrésnek megfelelő bejegyzés.</p>';
+        return;
+      }
+
+      container.innerHTML = records.map(item => `
+        <div class="entry-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <span class="entry-badge">🏢 ${escapeHtml(item.munkahely)}</span>
+              <div class="entry-header">📅 ${escapeHtml(normDate(item.datum))}</div>
+              <div class="entry-time">🕒 ${escapeHtml(item.idoKezdete)} - ${escapeHtml(item.idoVege)} (${escapeHtml(item.intervallum)})</div>
+            </div>
+            <button class="delete-btn" onclick="deleteEntry(${item.id})">🗑️</button>
+          </div>
+          <div class="entry-task">${escapeHtml(item.feladat)}</div>
+          ${item.anyag ? `<div class="entry-material">📦 ${escapeHtml(item.anyag)}</div>` : ''}
+        </div>
+      `).join('');
+    }
+
+    // ==========================================
+    // 6. TÁBLÁZAT EXPORT (.XLSX) ÉS ADATIMPORT
+    // ==========================================
+    function exportFilteredToExcel() {
+      if (!currentFilteredRecords || currentFilteredRecords.length === 0) {
+        alert("Nincs exportálható bejegyzés az aktuális szűrésben!");
+        return;
+      }
+
+      const dateFrom = document.getElementById('filterDateFrom').value;
+      const dateTo = document.getElementById('filterDateTo').value;
+      let periodText = "Összes időszak";
+      if (dateFrom && dateTo) periodText = `${dateFrom} – ${dateTo}`;
+      else if (dateFrom) periodText = `${dateFrom}-tól`;
+      else if (dateTo) periodText = `${dateTo}-ig`;
+
+      const totalTimeText = document.getElementById('summaryTotalTime').innerText;
+
+      const exportRows = [...currentFilteredRecords].reverse().map(r => ({
+        munkahely: r.munkahely || '',
+        datum: normDate(r.datum),
+        idoKezdete: r.idoKezdete || '',
+        idoVege: r.idoVege || '',
+        intervallum: r.intervallum || calcDurationStr(r.idoKezdete, r.idoVege),
+        feladat: r.feladat || '',
+        anyag: r.anyag || ''
+      }));
+
+      const payload = {
+        userName: userProfile.name || 'Felhasználó',
+        period: periodText,
+        totalTime: totalTimeText,
+        rows: exportRows
+      };
+
+      if (typeof window.AndroidExport !== 'undefined') {
+        window.AndroidExport.exportXlsx(JSON.stringify(payload));
+      } else {
+        alert("Az .xlsx fájlmegosztás az Android alkalmazásban érhető el.");
+      }
+    }
+
+    function exportFullJsonBackup() {
+      const backupObj = {
+        app: 'Munkanaplo',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        profile: userProfile,
+        entries: allRecords
+      };
+      const fileName = `Munkanaplo_mentes_${formatDateStr(new Date())}.json`;
+      if (typeof window.AndroidExport !== 'undefined') {
+        window.AndroidExport.exportJsonBackup(fileName, JSON.stringify(backupObj, null, 2));
+      } else {
+        const blob = new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName;
+        a.click();
+      }
+    }
+
+    function triggerImportFromOnboarding() {
+      importTargetContext = 'onboarding';
+      openNativeOrFallbackFilePicker();
+    }
+
+    function triggerImportFromSettings() {
+      importTargetContext = 'settings';
+      openNativeOrFallbackFilePicker();
+    }
+
+    function openNativeOrFallbackFilePicker() {
+      if (typeof window.AndroidExport !== 'undefined') {
+        window.AndroidExport.openImportFilePicker();
+      } else {
+        document.getElementById('fallbackFileInput').click();
+      }
+    }
+
+    function handleFallbackFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        if (file.name.toLowerCase().endsWith('.json')) {
+          window.onAndroidFileImported('json', text);
+        } else {
+          window.onAndroidFileImported('csv', text);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+      event.target.value = '';
+    }
+
+    window.onAndroidFileImported = async function(fileType, payloadStr) {
+      const targetMsgId = importTargetContext === 'onboarding' ? 'onboardStatus' : 'settingsStatus';
+      try {
+        if (fileType === 'json') {
+          const parsed = JSON.parse(payloadStr);
+          if (!parsed || !Array.isArray(parsed.entries)) {
+            showBoxStatus(targetMsgId, 'Érvénytelen JSON biztonsági mentés fájl.', false);
+            return;
+          }
+          if (parsed.profile && parsed.profile.name) {
+            userProfile.name = parsed.profile.name;
+          } else if (!userProfile.name) {
+            userProfile.name = document.getElementById('onboardName').value.trim() || 'Felhasználó';
+          }
+          const incomingWps = (parsed.profile && Array.isArray(parsed.profile.workplaces)) ? parsed.profile.workplaces : [];
+          mergeWorkplaces(incomingWps);
+
+          const addedCount = await mergeImportedEntries(parsed.entries);
+          await dbSaveProfile(userProfile);
+          allRecords = await dbGetAllEntries();
+
+          if (importTargetContext === 'onboarding') {
+            showMainApp();
+          } else {
+            refreshWorkplaceUI();
+            applyFilters();
+          }
+          showBoxStatus(targetMsgId, `Sikeres visszaállítás! (${addedCount} új bejegyzés betöltve.)`, true);
+          return;
+        }
+
+        let importedData = null;
+        if (fileType === 'table') {
+          importedData = JSON.parse(payloadStr);
+        } else if (fileType === 'csv') {
+          importedData = parseCsvTextToTableObj(payloadStr);
+        }
+
+        if (!importedData || !Array.isArray(importedData.entries) || importedData.entries.length === 0) {
+          showBoxStatus(targetMsgId, 'Nem található importálható munkanapló-sor a fájlban.', false);
+          return;
+        }
+
+        const wpSet = new Set(userProfile.workplaces);
+        (importedData.workplaces || []).forEach(w => { if (w && w.trim()) wpSet.add(w.trim()); });
+        importedData.entries.forEach(r => { if (r.munkahely && r.munkahely.trim()) wpSet.add(r.munkahely.trim()); });
+        userProfile.workplaces = Array.from(wpSet);
+
+        if (!userProfile.name) {
+          const typedName = document.getElementById('onboardName').value.trim();
+          userProfile.name = typedName || 'Felhasználó';
+        }
+
+        const addedCount = await mergeImportedEntries(importedData.entries);
+        await dbSaveProfile(userProfile);
+        allRecords = await dbGetAllEntries();
+
+        if (importTargetContext === 'onboarding') {
+          showMainApp();
+          showStatus(`Sikeres importálás! ${addedCount} bejegyzés és ${userProfile.workplaces.length} munkahely betöltve.`, true);
+        } else {
+          refreshWorkplaceUI();
+          applyFilters();
+          showBoxStatus('settingsStatus', `Sikeres importálás! ${addedCount} új bejegyzés hozzáadva.`, true);
+        }
+      } catch (err) {
+        showBoxStatus(targetMsgId, 'Importálási hiba: ' + err.message, false);
+      }
+    };
+
+    function mergeWorkplaces(newList) {
+      newList.forEach(w => {
+        if (w && !userProfile.workplaces.some(existing => existing.toLowerCase() === w.trim().toLowerCase())) {
+          userProfile.workplaces.push(w.trim());
+        }
+      });
+    }
+
+    async function mergeImportedEntries(incomingEntries) {
+      const existingSignatures = new Set(
+        allRecords.map(r => `${r.munkahely}|${normDate(r.datum)}|${r.idoKezdete}|${r.idoVege}|${r.feladat}`)
+      );
+
+      const toInsert = [];
+      incomingEntries.forEach(raw => {
+        const cleanDate = normDate(raw.datum);
+        const cleanStart = normTime(raw.idoKezdete);
+        const cleanEnd = normTime(raw.idoVege);
+        const wp = (raw.munkahely || '').trim();
+        const task = (raw.feladat || '').trim();
+        const mat = (raw.anyag || '').trim();
+        const dur = raw.intervallum ? normTime(raw.intervallum) : calcDurationStr(cleanStart, cleanEnd);
+
+        if (!wp || !cleanDate || !task) return;
+
+        const sig = `${wp}|${cleanDate}|${cleanStart}|${cleanEnd}|${task}`;
+        if (!existingSignatures.has(sig)) {
+          existingSignatures.add(sig);
+          toInsert.push({
+            munkahely: wp,
+            datum: cleanDate,
+            idoKezdete: cleanStart,
+            idoVege: cleanEnd,
+            intervallum: dur,
+            feladat: task,
+            anyag: mat
+          });
+        }
+      });
+
+      if (toInsert.length > 0) {
+        await dbBulkAddEntries(toInsert);
+      }
+      return toInsert.length;
+    }
+
+    function parseCsvTextToTableObj(csvText) {
+      const lines = csvText.replace(/^\uFEFF/, '').split(/\r?\n/).filter(l => l.trim().length > 0);
+      if (lines.length < 2) return { workplaces: [], entries: [] };
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const rows = lines.map(line => line.split(sep).map(cell => cell.replace(/^"|"$/g, '').trim()));
+      const entries = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (r.length >= 6) {
+          entries.push({
+            munkahely: r[0] || '',
+            datum: r[1] || '',
+            idoKezdete: r[2] || '',
+            idoVege: r[3] || '',
+            intervallum: r[4] || '',
+            feladat: r[5] || '',
+            anyag: r[6] || ''
+          });
+        }
+      }
+      return { workplaces: [], entries: entries };
+    }
+
+    // ==========================================
+    // 7. HANGALAPÚ DIKTÁLÁS (Natív Android Bridge)
+    // ==========================================
+    const isMunkanaploAndroidApp = (navigator.userAgent.indexOf('MunkanaploApp') !== -1) || (typeof window.AndroidSpeech !== 'undefined');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let activeDictationField = null;
+    let dictationBaseText = "";
+
+    function focusTextareaAtEnd(textarea) {
+      if (!textarea) return;
+      try {
+        window.focus();
+        textarea.focus();
+        const len = textarea.value.length;
+        textarea.setSelectionRange(len, len);
+        textarea.scrollTop = textarea.scrollHeight;
+      } catch (e) {}
+    }
+
+    window.addEventListener('message', function(event) {
+      const data = event.data;
+      if (!data || data.type !== 'ANDROID_SPEECH') return;
+
+      if (data.event === 'ready') {
+        if (activeDictationField) {
+          const textarea = document.getElementById(activeDictationField);
+          focusTextareaAtEnd(textarea);
+          const micBtn = document.getElementById('mic-' + activeDictationField);
+          if (micBtn) {
+            micBtn.classList.add('recording');
+            micBtn.innerText = '⏹️ Hallgatom...';
+          }
+        }
+      } else if (data.event === 'result') {
+        if (!activeDictationField) return;
+        const textarea = document.getElementById(activeDictationField);
+        if (textarea && data.text) {
+          textarea.value = dictationBaseText + data.text.trim();
+          focusTextareaAtEnd(textarea);
+        }
+        if (data.isFinal) {
+          resetMicUI();
+        }
+      } else if (data.event === 'error') {
+        if (data.message) {
+          showStatus(data.message, false);
+        }
+        resetMicUI();
+      } else if (data.event === 'end') {
+        resetMicUI();
+      }
+    });
+
+    function initSpeechRecognition() {
+      if (isMunkanaploAndroidApp) return;
+      if (!SpeechRecognition) {
+        document.querySelectorAll('.mic-btn').forEach(btn => {
+          btn.style.opacity = '0.5';
+        });
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = 'hu-HU';
+      recognition.interimResults = true;
+      recognition.continuous = false;
+
+      recognition.onresult = function(event) {
+        if (!activeDictationField) return;
+        const textarea = document.getElementById(activeDictationField);
+        if (!textarea) return;
+        let sessionFinal = '';
+        let sessionInterim = '';
+        for (let i = 0; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) sessionFinal += transcript;
+          else sessionInterim += transcript;
+        }
+        textarea.value = dictationBaseText + (sessionFinal + sessionInterim).trim();
+        focusTextareaAtEnd(textarea);
+      };
+
+      recognition.onerror = function(event) {
+        if (event.error !== 'aborted') {
+          showStatus("Diktálási hiba: " + event.error, false);
+        }
+        resetMicUI();
+      };
+
+      recognition.onend = function() {
+        resetMicUI();
+      };
+    }
+
+    function toggleDictation(fieldId) {
+      if (!isMunkanaploAndroidApp && (!SpeechRecognition || !recognition)) {
+        showStatus("Ez a böngésző nem támogatja a beépített diktálást.", false);
+        return;
+      }
+
+      if (activeDictationField === fieldId) {
+        stopDictation();
+        return;
+      }
+
+      if (activeDictationField) {
+        stopDictation();
+      }
+
+      const textarea = document.getElementById(fieldId);
+      const micBtn = document.getElementById('mic-' + fieldId);
+      if (!textarea || !micBtn) return;
+
+      focusTextareaAtEnd(textarea);
+      showStatus('', false);
+      activeDictationField = fieldId;
+
+      const currentVal = textarea.value;
+      dictationBaseText = currentVal.length > 0 && !/\s$/.test(currentVal) ? currentVal + ' ' : currentVal;
+
+      micBtn.classList.add('recording');
+      micBtn.innerText = '⏹️ Hallgatom...';
+
+      if (isMunkanaploAndroidApp) {
+        try {
+          if (typeof window.AndroidSpeech !== 'undefined') {
+            window.AndroidSpeech.startListening(fieldId);
+          } else {
+            window.top.postMessage({ type: 'START_ANDROID_SPEECH', fieldId: fieldId }, '*');
+          }
+        } catch (err) {
+          showStatus("Android mikrofon hiba: " + err.message, false);
+          resetMicUI();
+        }
+      } else {
+        try {
+          recognition.start();
+        } catch (err) {
+          showStatus("Mikrofon indítási hiba: " + err.message, false);
+          resetMicUI();
+        }
+      }
+    }
+
+    function stopDictation() {
+      if (isMunkanaploAndroidApp && activeDictationField) {
+        try {
+          if (typeof window.AndroidSpeech !== 'undefined') {
+            window.AndroidSpeech.stopListening();
+          } else {
+            window.top.postMessage({ type: 'STOP_ANDROID_SPEECH' }, '*');
+          }
+        } catch (e) {}
+      } else if (recognition && activeDictationField) {
+        try {
+          recognition.stop();
+        } catch (e) {}
+      }
+      resetMicUI();
+    }
+
+    function resetMicUI() {
+      activeDictationField = null;
+      document.querySelectorAll('.mic-btn').forEach(btn => {
+        btn.classList.remove('recording');
+        btn.innerText = '🎙️ Diktálás';
+      });
+    }
+
+    // ==========================================
+    // 8. SEGÉDFÜGGVÉNYEK
+    // ==========================================
+    function toggleAccordion(cardId) {
+      stopDictation();
+      const targetCard = document.getElementById(cardId);
+      const isAlreadyOpen = targetCard.classList.contains('open');
+
+      document.querySelectorAll('.accordion-card').forEach(card => {
+        card.classList.remove('open');
+        const headerBtn = card.querySelector('.accordion-header');
+        if (headerBtn) headerBtn.setAttribute('aria-expanded', 'false');
+      });
+
+      if (!isAlreadyOpen) {
+        targetCard.classList.add('open');
+        const headerBtn = targetCard.querySelector('.accordion-header');
+        if (headerBtn) headerBtn.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+    function showStatus(msg, isSuccess) {
+      showBoxStatus('statusMsg', msg, isSuccess);
+    }
+
+    function showBoxStatus(elId, msg, isSuccess) {
+      const box = document.getElementById(elId);
+      if (!box) return;
+      if (!msg) {
+        box.style.display = 'none';
+        return;
+      }
+      box.innerText = msg;
+      box.className = 'status-msg ' + (isSuccess ? 'success' : 'error');
+      box.style.display = 'block';
+    }
+
+    function formatDateStr(d) {
+      const month = '' + (d.getMonth() + 1);
+      const day = '' + d.getDate();
+      const year = d.getFullYear();
+      return [year, month.padStart(2, '0'), day.padStart(2, '0')].join('-');
+    }
+
+    function normDate(str) {
+      if (!str) return '';
+      const cleaned = str.toString().trim().replace(/[.\/]/g, '-').replace(/-+/g, '-').replace(/-$/, '');
+      const parts = cleaned.split('-');
+      if (parts.length >= 3 && parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      }
+      return cleaned;
+    }
+
+    function normTime(str) {
+      if (!str) return '';
+      const s = str.toString().trim();
+      if (s.includes(':')) {
+        const p = s.split(':');
+        return `${p[0].padStart(2, '0')}:${(p[1] || '00').padStart(2, '0')}`;
+      }
+      return s;
+    }
+
+    function calcDurationStr(startStr, endStr) {
+      if (!startStr || !endStr || !startStr.includes(':') || !endStr.includes(':')) return '00:00';
+      const k = startStr.split(':');
+      const v = endStr.split(':');
+      const kMin = (parseInt(k[0], 10) || 0) * 60 + (parseInt(k[1], 10) || 0);
+      const vMin = (parseInt(v[0], 10) || 0) * 60 + (parseInt(v[1], 10) || 0);
+      let diff = vMin - kMin;
+      if (diff < 0) diff += 24 * 60;
+      const h = Math.floor(diff / 60);
+      const m = diff % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    function intervalToMinutes(intervalStr, startStr, endStr) {
+      if (intervalStr && intervalStr.includes(':')) {
+        const p = intervalStr.split(':');
+        return (parseInt(p[0], 10) || 0) * 60 + (parseInt(p[1], 10) || 0);
+      }
+      if (startStr && endStr && startStr.includes(':') && endStr.includes(':')) {
+        const k = startStr.split(':');
+        const v = endStr.split(':');
+        const kMin = parseInt(k[0], 10) * 60 + parseInt(k[1], 10);
+        const vMin = parseInt(v[0], 10) * 60 + parseInt(v[1], 10);
+        let diff = vMin - kMin;
+        if (diff < 0) diff += 24 * 60;
+        return diff;
+      }
+      return 0;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function escapeJs(str) {
+      if (!str) return '';
+      return str.toString().replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+    }
+  </script>
+</body>
+</html>
