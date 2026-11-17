@@ -128,6 +128,14 @@ class MainActivity : AppCompatActivity() {
                 view: WebView?,
                 request: WebResourceRequest?
             ): Boolean {
+                val url = request?.url ?: return false
+                if (url.host != "appassets.androidplatform.net") {
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, url))
+                    } catch (_: Exception) {
+                    }
+                    return true
+                }
                 return false
             }
         }
@@ -396,12 +404,9 @@ class MainActivity : AppCompatActivity() {
         sb.append("""<col min="7" max="7" width="32" customWidth="1"/>""")
         sb.append("""</cols><sheetData>""")
 
-        // 1. sor: Cím
         sb.append("""<row r="1">${inlineCell("A1", "Munkanapló – $userName", 2)}</row>""")
-        // 2. sor: Szűrési adatok
         sb.append("""<row r="2">${inlineCell("A2", "Szűrt időszak: $period | Összesen: $totalTime", 3)}</row>""")
 
-        // 4. sor: Fejléc
         val headers = listOf(
             "Munkahely",
             "Dátum",
@@ -418,7 +423,6 @@ class MainActivity : AppCompatActivity() {
         }
         sb.append("""</row>""")
 
-        // Adatsorok (5. sortól)
         for (i in 0 until rows.length()) {
             val r = rows.getJSONObject(i)
             val rowNum = i + 5
@@ -439,7 +443,6 @@ class MainActivity : AppCompatActivity() {
             sb.append("""</row>""")
         }
 
-        // Összesítő sor
         val sumRow = rows.length() + 6
         sb.append("""<row r="$sumRow">""")
         sb.append(inlineCell("A$sumRow", "Összesen:", 1))
@@ -521,7 +524,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Munkalapok azonosítása (Nyilvántartás és Munkahelyek)
         val sheetPaths = zipEntries.keys
             .filter { it.startsWith("xl/worksheets/sheet") && it.endsWith(".xml") }
             .sorted()
@@ -535,7 +537,6 @@ class MainActivity : AppCompatActivity() {
             if (rows.isEmpty()) continue
 
             val firstRow = rows[0]
-            // Ha a "Munkahelyek" fül (1 oszlopos lista)
             if (firstRow.size == 1 && firstRow[0].trim().equals("Munkahelyek", ignoreCase = true)) {
                 for (rIdx in 1 until rows.size) {
                     val wp = rows[rIdx].firstOrNull()?.trim().orEmpty()
@@ -544,7 +545,6 @@ class MainActivity : AppCompatActivity() {
                 continue
             }
 
-            // Ha a "Nyilvántartás" fül (több oszlopos táblázat)
             for (rIdx in 1 until rows.size) {
                 val r = rows[rIdx]
                 if (r.size < 6) continue
